@@ -147,7 +147,7 @@ async function saveFinalStabilityScore(finalStability) {
 async function loadLeaderboard() {
   const body = document.getElementById("leaderboard-body");
   if (!body) return;
-  body.innerHTML = `<tr><td colspan="3" class="muted">Loading…</td></tr>`;
+  body.innerHTML = `<tr><td colspan="4" class="muted">Loading…</td></tr>`;
 
   try {
     const q = query(
@@ -160,18 +160,19 @@ async function loadLeaderboard() {
     snap.forEach((doc) => rows.push(doc.data()));
 
     if (rows.length === 0) {
-      body.innerHTML = `<tr><td colspan="3" class="muted">No scores yet.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="4" class="muted">No scores yet.</td></tr>`;
       return;
     }
 
     body.innerHTML = rows
-      .map((r) => {
+      .map((r, i) => {
         const photo = r.photoURL
           ? `<img class="lb-photo" src="${r.photoURL}" alt="" />`
           : `<div class="lb-photo" aria-hidden="true"></div>`;
         const name = (r.displayName || "Anonymous").replaceAll("<", "&lt;");
         const score = Number(r.finalStability ?? 0);
         return `<tr>
+          <td class="num">${i + 1}</td>
           <td>${photo}</td>
           <td>${name}</td>
           <td class="num">${score}</td>
@@ -180,7 +181,7 @@ async function loadLeaderboard() {
       .join("");
   } catch (e) {
     console.error("Failed to load leaderboard:", e);
-    body.innerHTML = `<tr><td colspan="3" class="muted">Failed to load leaderboard.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="4" class="muted">Failed to load leaderboard.</td></tr>`;
   }
 }
 
@@ -1323,6 +1324,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Game UI (only usable when logged in)
   document.getElementById("start-btn").addEventListener("click", startGame);
+  document.getElementById("leaderboard-btn")?.addEventListener("click", () => {
+    renderUserChip();
+    showLeaderboardScreen();
+    void loadLeaderboard();
+  });
   document.getElementById("add-feed-btn").addEventListener("click", onAddFeeding);
   document.getElementById("resolve-btn").addEventListener("click", finishFeedingPhase);
   document.getElementById("predator-select").addEventListener("change", updatePreyOptions);
