@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Feeding Choice Simulator</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Auth gate (game locked until login) -->
+  <section id="auth-screen" class="screen">
+    <div class="logo">🔐</div>
+    <h1>Sign in to play</h1>
+    <p class="subtitle">Use Google to save your score and enter the Hall of Fame.</p>
+    <div class="intro-card">
+      <p class="tip">
+        Your name, photo, and final stability score will be saved to the leaderboard.
+      </p>
+      <button id="google-login-btn" class="btn btn-primary">Continue with Google</button>
+      <p id="auth-error" class="auth-error"></p>
+    </div>
+  </section>
+
+  <section id="start-screen" class="screen">
+    <div class="logo">🌍</div>
+    <h1>Feeding Choice Simulator</h1>
+    <p class="subtitle">8th grade — you control who eats whom in the food web</p>
+
+    <div class="intro-card">
+      <h2>How to play</h2>
+      <p>Each <strong>season</strong> you get <strong>6 feeding actions</strong>. You decide which animals eat which food sources and how much.</p>
+      <ol>
+        <li><strong>Assign feeding</strong> — pick predator → prey → amount (or use quick buttons / click arrows on the food web).</li>
+        <li><strong>End season</strong> — the simulation runs: energy transfer (~10% rule), hunger, births, deaths.</li>
+        <li>Species you <strong>forget to feed</strong> lose large chunks of population each season.</li>
+        <li>If you ignore feeding, at least one species will likely go <strong>extinct within 4 seasons</strong>.</li>
+        <li>Up to <strong>6 random seasons</strong> (out of 12) trigger an environmental event each game.</li>
+      </ol>
+      <h2>Valid feeding links</h2>
+      <ul class="link-list">
+        <li>🐛 Aphid / Caterpillar / 🐭 Mouse → 🌿 Grass or ☘️ Clover</li>
+        <li>🐰 Rabbit → 🌿 Grass or ☘️ Clover</li>
+        <li>🐦 Blue Tit → 🐛 Aphid or Caterpillar</li>
+        <li>🦊 Fox → 🐰 Rabbit, 🐦 Blue Tit, or 🐭 Mouse</li>
+        <li>🦅 Hawk → 🐭 Mouse, 🐰 Rabbit, or 🐦 Blue Tit</li>
+        <li>🌿 Plants use sunlight · 🍄 Fungi grow when other species die (dead matter)</li>
+      </ul>
+      <p class="tip">
+        💡 Strategy: Over-harvest plants and insects collapse the web. Under-feed the fox and rabbits explode — then plants suffer. Balance matters!
+      </p>
+    </div>
+
+    <button id="start-btn" class="btn btn-primary">Start game</button>
+  </section>
+
+  <section id="game-screen" class="screen hidden">
+    <header class="game-header">
+      <div class="stat-pill">
+        <span class="label">Season</span>
+        <span class="value"><span id="round-num">0</span> / <span id="max-rounds">12</span></span>
+      </div>
+      <div class="stat-pill actions-pill">
+        <span class="label">Feeding actions left</span>
+        <span class="value" id="actions-left">6</span>
+      </div>
+      <div class="stability-wrap">
+        <div class="stat-pill" style="align-items: flex-start; width: 100%">
+          <span class="label">Stability</span>
+          <span class="value" id="stability-value">100</span>
+        </div>
+        <div class="stability-bar">
+          <div id="stability-fill" class="stability-fill healthy" style="width: 100%"></div>
+        </div>
+      </div>
+      <div id="active-event-banner" class="event-banner hidden">
+        <span id="active-event-text"></span>
+      </div>
+    </header>
+
+    <!-- Main interaction: feeding choices -->
+    <section class="feeding-panel panel">
+      <h2>🍽️ Your feeding decisions this season</h2>
+      <p class="panel-desc">Spend up to 6 actions. Each link sends energy up the web but damages the prey population.</p>
+
+      <div class="feeding-form">
+        <div class="form-group">
+          <label for="predator-select">Who eats? (predator)</label>
+          <select id="predator-select">
+            <option value="Aphid">🐛 Aphid</option>
+            <option value="Caterpillar">🐛 Caterpillar</option>
+            <option value="Mouse">🐭 Mouse</option>
+            <option value="Rabbit">🐰 Rabbit</option>
+            <option value="BlueTit">🐦 Blue Tit</option>
+            <option value="Fox">🦊 Fox</option>
+            <option value="Hawk">🦅 Hawk</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="prey-select">What do they eat? (prey)</label>
+          <select id="prey-select"></select>
+        </div>
+        <div class="form-group">
+          <label for="amount-select">How much? (feeding units)</label>
+          <select id="amount-select">
+            <option value="50">Light — 50</option>
+            <option value="120" selected>Medium — 120</option>
+            <option value="200">Heavy — 200</option>
+            <option value="350">Very heavy — 350</option>
+          </select>
+        </div>
+        <button type="button" id="add-feed-btn" class="btn btn-primary">+ Add feeding</button>
+      </div>
+
+      <p id="feeding-feedback" class="feeding-feedback"></p>
+
+      <div class="quick-section">
+        <span class="quick-label">Quick assign:</span>
+        <div id="quick-links" class="quick-links"></div>
+      </div>
+
+      <ul id="choices-list" class="choices-list"></ul>
+
+      <div class="resolve-row">
+        <button type="button" id="resolve-btn" class="btn btn-primary btn-large">
+          End season &amp; run simulation
+        </button>
+        <p class="resolve-hint">You can use fewer than 6 actions, but unfed consumers starve faster.</p>
+      </div>
+    </section>
+
+    <div id="species-grid"></div>
+
+    <div class="panels">
+      <div class="panel">
+        <h2>Food web — click a gray arrow to select a link</h2>
+        <svg id="food-web-svg" viewBox="0 0 360 320" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#64748b" />
+            </marker>
+          </defs>
+        </svg>
+      </div>
+      <div class="panel sidebar">
+        <h2>Environment</h2>
+        <div class="env-row">
+          <div class="label"><span>Water factor</span><span id="water-factor">100%</span></div>
+          <div class="mini-bar"><div id="water-bar" style="width: 100%"></div></div>
+        </div>
+        <div class="env-row">
+          <div class="label"><span>Dead matter pool</span><span id="dead-matter">0</span></div>
+        </div>
+        <p class="env-note">Decomposers recycle dead matter automatically each season. Environmental events occur on up to 6 random seasons per game.</p>
+        <h2 style="margin-top: 1rem">Stability over time</h2>
+        <canvas id="stability-chart" width="248" height="120"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- Leaderboard -->
+  <section id="leaderboard" class="screen hidden">
+    <div class="panel">
+      <div class="leaderboard-head">
+        <h2>🏆 Hall of Fame</h2>
+        <div class="leaderboard-actions">
+          <button id="refresh-leaderboard-btn" class="btn btn-secondary">Refresh</button>
+          <button id="logout-btn" class="btn btn-secondary">Logout</button>
+        </div>
+      </div>
+      <div class="leaderboard-meta">
+        <div class="user-chip">
+          <img id="user-photo" class="user-photo" alt="" />
+          <span id="user-name" class="user-name"></span>
+        </div>
+        <span class="muted" id="session-status"></span>
+      </div>
+
+      <div class="table-wrap">
+        <table class="leaderboard-table" aria-label="Leaderboard">
+          <thead>
+            <tr>
+              <th>Photo</th>
+              <th>Name</th>
+              <th class="num">Final Stability</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body">
+            <tr><td colspan="3" class="muted">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="end-screen" class="screen hidden">
+    <h1 id="end-title">Game over</h1>
+    <p id="end-message"></p>
+    <div class="end-stats">
+      <div class="stat"><span class="label">Seasons</span><span class="value" id="end-round">0</span></div>
+      <div class="stat"><span class="label">Final stability</span><span class="value" id="end-stability">0</span></div>
+    </div>
+    <div id="end-summary"></div>
+    <button id="restart-btn" class="btn btn-secondary">Play again</button>
+  </section>
+
+  <div id="event-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <div id="event-modal-icon" class="modal-icon">⚡</div>
+      <h2 id="event-modal-title">Event</h2>
+      <p id="event-modal-desc"></p>
+      <p id="event-modal-targets" class="targets"></p>
+      <button id="event-modal-close" class="btn btn-primary" style="margin-top: 1rem">Continue</button>
+    </div>
+  </div>
+
+  <div id="results-modal" class="modal-overlay hidden">
+    <div class="modal results-modal">
+      <h2>📊 Season results</h2>
+      <div id="results-body"></div>
+      <button id="results-close" class="btn btn-primary" style="margin-top: 1rem">Plan next season</button>
+    </div>
+  </div>
+
+  <script type="module" src="game.js"></script>
+  <footer class="site-credit" aria-label="Credits">Created by Bruno Bassi</footer>
+</body>
+</html>
