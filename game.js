@@ -25,7 +25,13 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 // Paste your config here:
-const firebaseConfig = {};
+const firebaseConfig = {apiKey: "AIzaSyBzNqw7LlcVzo_iG1jJkXoNKvQyXy3RMbo",
+  authDomain: "juego-ecosystem.firebaseapp.com",
+  projectId: "juego-ecosystem",
+  storageBucket: "juego-ecosystem.firebasestorage.app",
+  messagingSenderId: "173396332409",
+  appId: "1:173396332409:web:4104b5f5aaf30e0756e9a8",
+  measurementId: "G-EK5YH5CT73"};
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
